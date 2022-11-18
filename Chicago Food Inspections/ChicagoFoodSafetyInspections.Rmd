@@ -1,0 +1,439 @@
+---
+title: "Food Safety Inspections in Chicago"
+author: "Jose Zavala"
+output:
+  html_document:
+    df_print: paged
+    keep_md: yes
+  pdf_document: default
+---
+
+
+```{r}
+library(tidyverse)
+library(DataExplorer) #makes EDA easy
+library(lubridate) #used for dates
+library(anytime) #helps with date/time
+library(openxlsx) #open xlsx format files
+```
+### Introduction
+
+Chicago is a world class city with a vibrant atmosphere and one of the best food scenes in the country. I used to live in the city proper and the one question that always came up was: where should I eat? 
+
+That question is easily answered nowadays. Go to Yelp/Google Maps/search engine and type away. You can find ratings for restaurants, wait times, and a plethora of other information. The one bit of information that most of these platforms don't provide is food safety. It can be the best restaurant in the world, but if how well does it do in health inspections? If I visit this restaurant, will I get food poisoning? 
+
+Luckily the City of Chicago provides a list of all the city's health inspections. This dataset features inspections going all the way back to 2010 and up to present date. Every establishment that serves food and has been inspected is here. The issue is that the excel file has over 240,000 observations and it is in a long format. Some key information is provided including address, zip code, results, business name, risk category, and a few other variables. Of particular importance are the risk category, results, and zip codes. The data was downloaded in October 2022.
+
+I am interested in generalizing and seeing what I can discover from this dataset.
+
+Questions to answer:
+
+1. I suspect that since the pandemic and subsequent reopening we probably have seen an increase in failure rates/a decrease in passing rates from inspections. Is this true? 
+2. Where are the highest failure rates in the city? How about the lowest? 
+3. Besides restaurants, what other types of establishments are subject to food safety inspections? 
+
+
+
+Source for dataset: 
+https://data.cityofchicago.org/Health-Human-Services/Food-Inspections/4ijn-s7e5
+
+
+### Data
+
+```{r}
+df = read.xlsx("/Users/jz/Local Desktop/local - personal projects/Excel/chicago restaurants/Food_Inspections.xlsx")
+
+plot_str(df)
+
+introduce(df)
+
+plot_intro(df)
+```
+
+We have a pretty complete dataset, 72.2% of all rows are complete. Given 72.2% complete rows there are only 1.8% missing observations.
+
+```{r}
+plot_missing(df)
+```
+
+We see that by and large the violations column is the one that is missing. Given that it is comprised of string text we are not too concerned with this. the next two highest columns with missing data are Facility type and AKA Name at 2.08% and 1.04% respectively. Again not too concerning, considering that they are very small percentages.
+
+```{r}
+#visualize all discrete vars
+
+plot_bar(df)
+```
+
+
+
+### Data Cleaning and Preprocessing
+
+We would like to clean the data a bit change variable types. We have a couple of different  possible results for this analysis. 
+
+We are interested in the Results variable which has 7 different levels/possibilities: 
+
+"Business Not Located" ,"Fail",  "No Entry", "Not Ready", "Out of Business", "Pass",  and "Pass w/ Conditions" 
+
+For this analysis we will be only looking at the establishments which received a "Pass", "Pass w/ Conditions", and 
+"Fail" ratings so we will be dropping the rest of the observations. 
+
+There are 4 risk categories:"All", "Risk 1 (High)", "Risk 2 (Medium)", "Risk 3 (Low)"
+
+We will be dropping the "All" category since it is redundant. 
+
+
+```{r}
+# data cleaning, we are going to drop some vars
+#final_data <- drop_columns(final_data, c("dst_origin", "tzone_origin", "year_flights", "tz_origin"))
+
+df_clean = df
+df_clean = df %>% drop_columns(c("Inspection.ID", "License.#", "Address", "Violations", "Location"))
+plot_bar(df_clean, by = "Results")
+
+```
+
+
+```{r}
+
+#levels for Results
+levels(as.factor(df$Results))
+
+#get dates as date type
+
+df_clean$Inspection.Date = as.Date(df_clean$Inspection.Date, origin = "1900-01-01")
+
+#make categories/factors into factors
+#str(df_clean)
+df_clean$State = as.factor(df_clean$State)
+df_clean$Risk = as.factor(df_clean$Risk)
+df_clean$Facility.Type = as.factor(df_clean$Facility.Type)
+df_clean$City = as.factor(df_clean$City)
+df_clean$Inspection.Type = as.factor(df_clean$Inspection.Type)
+
+df_clean = df_clean[df_clean $Risk %in% c("Risk 1 (High)", "Risk 2 (Medium)", "Risk 3 (Low)"), ]                     # Multiple factor levels
+df_clean$Results = as.factor(df_clean$Results)
+
+#levels(df_clean$Risk)
+#drops the "All" level from Risk
+df_clean$Risk = droplevels(df_clean$Risk)
+
+```
+
+
+```{r}
+#now we filter by the categories we are interested in looking at Pass, Fail, and Pass w/conditions
+levels(df_clean$Results)
+df_clean = droplevels(filter(df_clean, Results %in% c("Pass", "Pass w/ Conditions", "Fail")))
+levels(df_clean$Results)
+plot_bar(df_clean, by = "Results")
+#success
+```
+
+We also see that this dataset includes establishments that are not in Chicago explicitly. We will only be focused on those that are located in the city and therefore filtering by "Chicago" and any variations of Chicago that may be present in the dataset.
+
+
+```{r}
+#data cleaning continued
+
+levels(df_clean$City)
+
+#lots of not Chicago cities... filter by Chicago/possible Chicago misspellings
+
+df_clean = droplevels(filter(df_clean, City  %in% c("Chicago","312CHICAGO", "CCHICAGO", 
+                                                    "CHCHICAGO","CHCICAGO","chicago","Chicago", "CHicago", "CHICAGO", 
+                                                    "CHICAGOC","CHICAGOCHICAGO", "CHICAGOI","CHICAGOO", "312CHICAGO")))
+#check to see if only Chicago values are present
+levels(df_clean$City)
+
+```
+
+The dataset goes back to 2010. We are only interested in the recent results and will be filtering out any observations before 2017. 
+```{r}
+#year(df_clean$Inspection.Date)
+#we are only interested in 2017-2018
+df_clean = filter(df_clean, year(df_clean$Inspection.Date) %in%
+                    c("2022", "2021","2020", "2019","2018", "2017"))
+#check years
+min(year(df_clean$Inspection.Date))
+max(year(df_clean$Inspection.Date))
+
+```
+
+
+### Data Analysis
+There are many different types of establishments that are subject to the city's food inspectors. In fact, there are 508 different categories! 
+```{r}
+#Check levels of facility type
+levels(df_clean$Facility.Type)
+#508 different categories, including hair salon
+
+#group by type of facility and order by count in descending order
+df_clean %>% group_by(Facility.Type) %>% summarise(count = length(Facility.Type)) %>%
+             ungroup() %>% arrange(desc(count))
+```
+
+
+We can see that Restaurant is by far the most popular category with 57,072 entries followed by Grocery store and School. For the purposes of this analysis we will keep only categories with counts above 200 and label the rest as other. 200 was selected as the cutoff to keep the number of categories to a minimum. 
+
+
+```{r}
+df_clean2 = df_clean
+
+df_clean2$Facility.Type  = df_clean2$Facility.Type%>% forcats::fct_lump_min(min = 200, other_level = "Other") 
+
+
+#testdf %>%  mutate(Facility.Type = as.factor(Facility.Type) %>%
+  #                     forcats::fct_lump_min(min = 200, other_level = "Other")) 
+
+
+levels(df_clean2$Facility.Type)
+
+#save grouped data to variable 
+bar = df_clean2 %>% group_by(Facility.Type) %>% summarise(count = length(Facility.Type)) %>%
+             ungroup() %>% arrange(desc(count))
+
+bar
+#success we have collapsed the facility types from 508 to 15
+ggplot(bar, aes(x = Facility.Type, y = count)) + geom_col(color = "red", fill = "#B3DDF2") +
+  labs(title = "Number of inspections by type of Facility") + 
+  theme_minimal() + 
+  labs(x = "Facility Type", y = "Count") +
+  theme(axis.title = element_text(size = 9), plot.title = element_text(size = 9, face = "bold"),
+        axis.text.x = element_text(angle = 70, hjust = 1), text = element_text(size=8))
+
+```
+
+```{r}
+#we have the raw counts, but we would like percentages
+
+bar2 = df_clean2 %>% group_by(Facility.Type) %>% summarise(count = n()) %>% 
+  mutate(percent = round(count / sum(count), 3)) %>% ungroup() %>% arrange(desc(percent))
+
+bar2
+
+```
+
+As a percentage we see that Restaurants make up around 68.6% of inspections followed by grocery stores with 11.1% and schools with 7.3%. This is intuitive but it also presents a bit of a surprise that there are many other types of establishments that are subject to food safety inspections.
+
+We shift our focus a bit to focus on restaurants,  we'd like to track failure rate by year for restaurants
+
+
+```{r}
+
+bar4 = df_clean2[df_clean2$Facility.Type == "Restaurant",] %>%
+  group_by(Year = year(Inspection.Date), Results) %>%
+  summarise(count = n())
+bar4
+
+#data is long, we need it in a wide format
+```
+
+```{r}
+#long to wide
+bar5 = bar4 %>% spread(Results, count) 
+#
+bar5$Total = rowSums(bar5[,-1], na.rm = TRUE)
+bar5
+
+#we have an na year and column, let's drop them as they are 66 observations
+
+bar5 = subset(bar5, select = -c(`<NA>`) )
+
+bar5 = bar5[-c(7), ]
+
+#na row/column with 66 obs has been dropped
+
+#now we are interested in percentages per year by results
+bar5 = subset(bar5, select = -c(`Total`) )
+bar5 = subset(bar5, select = -c(`Year`) )
+bar5
+
+YearofInspection = c("2017", "2018", "2019", "2020", "2021" , "2022")
+
+pct_table = as.data.frame(cbind(YearofInspection,round(prop.table(as.matrix(bar5), margin = 1), digits = 3)))
+
+pct_table$YearofInspection = as.integer(pct_table$YearofInspection)
+pct_table$Fail = as.double(pct_table$Fail)
+pct_table$Pass = as.double(pct_table$Pass)
+pct_table$`Pass w/ Conditions` = as.double(pct_table$`Pass w/ Conditions`)
+
+pct_table
+
+
+```
+
+
+Now we will plot the trends over the years
+```{r}
+
+ggplot(pct_table, aes(x=YearofInspection)) + 
+  geom_line(aes(y = pct_table$Fail, color = "red")) + 
+  geom_line(aes(y = pct_table$Pass, color="darkgreen")) + 
+  geom_line(aes(y = pct_table$`Pass w/ Conditions`, color = "darkgoldenrod1")) + 
+  labs(title = "Results of Inspection Trends 2017-2022", colour="Results", x = "Year", y  = "Percent")  + 
+  scale_color_identity(name = "Results",
+                          breaks = c("red", "darkgreen", "darkgoldenrod1"),
+                          labels = c("Fail", "Pass", "Pass w/ Conditions"),
+                          guide = "legend") + theme_minimal() + 
+  theme(axis.title = element_text(size = 9),
+        plot.title = element_text(size = 12, face = "bold"),
+        legend.text = element_text(size = 9))
+
+```
+
+
+
+Very surprised to see these results! The shortage of labor across industries has become very apparent after the peak of the COVID pandemic and one would expect that we might see failure rates increase drastically in 2020 but we only see a slight increase of around 2%. One would expect with staffing shortages there would be less staff to manage establishments and address some of the concerns that could cause the inspection to fail.
+
+Another surprising trend we can see is in the "Pass" rating. We see a sharp decline from 2017 going into 2019 before it begins to recover. Likewise the "Pass w/ Conditions" sees the opposite effect. There is a sharp increase from 2017 into 2019 before it begins to drop. 
+
+What could be the cause? Upon further research we found that the City of Chicago implemented changes to starting on July 1, 2018. This would help explain why we see such a drastic increase in "Pass w/conditions" results as previous inspections that would have resulted in a "Pass" rating were downgraded to "Pass w/conditions." 
+
+###Zip Codes
+
+Chicago is a big city with many different neighborhoods that all help make Chicago a great place to live. We are interested to see where in the city can we find the most failed inspections. Now we will find the zip code with the most fail ratings. We find the top 10 and the bottom 10 in terms of the count of "Fail" results for the 2021 and 2022 years.  
+
+We start by finding the frequencies of each rating that we are interested in, for each zip code. Since we are obtaining raw counts areas with a lot establishments will see more more fail results than areas with a lesser number of establishments. 
+
+We find that the top zip code in terms of failed inspections has a failure rate of almost 50%! The subsequent zip codes which have the most inspections failed have a failure rate of around 30-35% so there is quite a difference. 
+
+The zip codes with the lowest failure rates all have rates lower than 20% so while there is a spread between the top and bottom zip codes it is not as pronounced as it would be imagined. 
+```{r}
+#first subset into years
+df_clean2$yearIns = (year(df_clean2$Inspection.Date))
+
+zipdf = filter(df_clean2, df_clean2$yearIns %in%
+                    c("2022", "2021"))
+
+by_zip = zipdf %>% group_by(Zip, Results) %>% summarise(count = length(Zip)) %>%
+             ungroup() %>% arrange(desc(count))
+
+top10_zip = by_zip %>% spread(Results, count) %>% ungroup() %>% arrange(desc(Fail)) %>% head(n = 10)
+bottom10_zip = by_zip %>% spread(Results, count) %>% ungroup() %>% arrange((Fail)) %>% head(n = 10)
+
+top10_zip
+bottom10_zip
+by_zip = by_zip %>% spread(Results, count) %>% ungroup() %>% arrange(desc(Fail)) 
+by_zip$Zip = as.factor(by_zip$Zip)
+zip_list = by_zip$Zip
+
+#need to remove zip factor variable otherwise prop.table will not run
+by_zip = subset(by_zip, select = -c(`Zip`) )
+#add zips back to list
+by_zip_pct  = cbind(zip_list, as.data.frame(round(prop.table(as.matrix(by_zip), margin = 1), digits = 3)))
+by_zip_pct
+#gather top 10 and bottom 10 by percentage
+top10_zip = by_zip_pct %>% arrange(desc(Fail)) %>% head(n = 10)
+bottom10_zip = by_zip_pct %>% arrange((Fail)) %>% head(n = 10)
+#show results
+top10_zip
+bottom10_zip
+```
+
+
+```{r}
+#zip code results visualzied
+ggplot(top10_zip, aes(x = zip_list, y = top10_zip$Fail, fill = zip_list)) + geom_col(alpha = 0.9) +
+  labs(title = "Failure rates by Zip - Top 10", x = "Zip Code" ,  y = "Percent") + 
+  theme_minimal() + 
+  theme(axis.title = element_text(size = 9), plot.title = element_text(size = 15, face = "bold"),
+        axis.text.x = element_text(angle = 70, hjust = 1), text = element_text(size=8), legend.position = "none")
+
+ggplot(bottom10_zip, aes(x = zip_list, y = bottom10_zip$Fail, fill = zip_list)) + geom_col() +
+  labs(title = "Failure rates by Zip - Bottom 10", x = "Zip Code" ,  y = "Percent") + 
+  theme_minimal() + 
+  theme(axis.title = element_text(size = 9), plot.title = element_text(size = 15, face = "bold"),
+        axis.text.x = element_text(angle = 70, hjust = 1), text = element_text(size=8), legend.position = "none")
+```
+
+
+### Statistical Testing
+
+In this section we will explore whether these risk categories see different failure rates. 
+
+We have 3 designated risk categories, risk 1 (high), risk 2 (medium), risk 3(low), that see inspections twice per year, once per year, and once every other year. We are interested in 3 possible outcomes: Pass, Fail, and Pass w/conditions. 
+
+We want to know if there is a different in proportion in failure rates between categories. Since we are interested in failure we will combine Pass and Pass w/conditions into a single result. We will limit our results to 2021.
+
+
+```{r}
+#filter on year and restaurants
+prop_df = filter(df_clean2, df_clean2$yearIns %in% c("2021"), df_clean2$Facility.Type == "Restaurant" )
+
+#head(prop_df, n = 10)
+
+by_risk = prop_df %>% group_by(Risk, Results) %>% summarise(count = length(Risk)) %>%
+             ungroup() %>% arrange(desc(count))
+
+by_risk = by_risk %>% spread(Results, count) 
+
+by_risk
+
+
+# now we will obtain the same table except collapsing Pass w/ Conditions and Pass into Pass
+
+df_clean2$Results  = recode_factor(df_clean2$Results, "Pass w/ Conditions" = "Pass")
+
+prop_df2 = filter(df_clean2, df_clean2$yearIns %in% c("2021"), df_clean2$Facility.Type == "Restaurant" )
+
+
+by_risk2 = prop_df2 %>% group_by(Risk, Results) %>% summarise(count = length(Risk)) %>%
+             ungroup() %>% arrange(desc(count)) %>% spread(Results, count) 
+
+by_risk2
+
+#success, counts match
+
+#now we will obtain proportions
+
+risk = by_risk2$Risk
+
+by_risk2 = subset(by_risk2, select = -c(`Risk`) )
+
+by_risk2_pct = cbind(risk, as.data.frame(round(prop.table(as.matrix(by_risk2), margin = 1), digits = 3)))
+by_risk2_pct
+
+
+```
+
+
+We have obtained the proportions of Pass/Fail results for the year 2021 by Risk Category. We can immediately notice two peculiar insights. There is not a huge difference in Pass/Fail percentages in between categories, the biggest difference appears to be between Risk 1 and Risk 2/Risk 3 and the difference in only around 3%. We conduct a test for equal proportions between all 3 groups and find some surprising results! The only statistically significant difference between the risk groups was between Risk category 1 and Risk category 2. The differences between 2 and 3 were not statistically significant and more surprisingly the differences between 1 and 3 were also not statistically significant. The difference between failure rates between 2 and 3 is .001 and it is surprising to see that it made a difference when comparing it to Risk 1. 
+
+It should be noted the estimated interval for Risk 1 vs Risk 2 would include 0 if we rounded the values so while statistically significant, this conclusion should be accepted with caution. 
+
+```{r}
+
+
+
+# 1 vs 2
+# difference is statistically significant (p-value = 0.01308)
+prop.test(c(1759, 274), c(5663+1759, 1060+274))
+
+# 1 vs 3
+# difference is not statistically significant (p-value > 0.05)
+prop.test(c(1759, 42), c(5663+1759, 164+42))
+
+# 2 vs 3
+# difference is not statistically significant (p-value > 0.05)
+prop.test(c(1060, 164), c(1060+274, 164+42))
+```
+
+### Conclusion and comments
+
+We set out to answer 3 main questions at the beginning of this analysis. 
+
+
+1. I suspect that since the pandemic and subsequent reopening we probably have seen an increase in failure rates from inspections. Is this true? 
+
+There had been a decrease in Pass ratings however this happened well before the pandemic! We see a decrease in Pass ratings from 2017 to 2019 and this is very likely due to a change in the code of the criteria that inspectors had to follow. In fact we are starting to see an increase in Pass rates. While we have seen a slight increase in failure rates these have been very small increases, nowhere near what we would have expected given the sitation caused by the pandemic (closures, etc.) and the following labor shortage seen across the food industry.
+
+2. Where are the highest failure rates in the city? How about the lowest? 
+The zip codes with the highest failure rates see failures between 30 and 50%. The zip codes with the lowest failure rates all see rates lower than 20%
+
+3. Besides restaurants, what other types of establishments are subject to food safety inspections? 
+There are an incredible amount of different types of establishments that are subject to food safety inspections but the overwhelming amount of inspections are done at restaurants, grocery stores, and schools.
+
+There is further exploration of this data set that could be done! While we primarily focused on "recent" data it does go back to 2010 so further analysis on historical trends could be done. We can also plot a map* of the establishments and see where they are geographically located.
+
+*Note* See tableau link, R interactive map coming soon!
+https://public.tableau.com/app/profile/jose.zavala1055/viz/ChicagoRestaurantsInspections/Map
