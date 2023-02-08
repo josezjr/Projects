@@ -1,0 +1,67 @@
+--SAMPLE SQL CODE, NAMES HAVE BEEN ANONYMIZED
+
+
+select o.OrderID , o.Freight  , c.CompanyName , c.Region , concat(e.LastName , ', ', e.FirstName) as FullName,
+cast(o.OrderDate as date) as OrderDate , cast(ShippedDate as date) as ShippedDate, DATEDIFF(day, o.OrderDate, o.ShippedDate) as LeadTime 
+from DB.NAME.Orders o 
+inner join DB.NAME.Customers c on o.CustomerID = c.CustomerID 
+inner join DB.NAME.Employees e on o.EmployeeID = e.EmployeeID 
+where ShippedDate < '1997-01-01' and c.Region is not null
+and (o.Freight < 50 or o.Freight > 100)
+order by c.CompanyName ASC
+
+
+
+select c.CategoryName, sum(od.Quantity) as TotalCount, sum(od.Quantity * od.UnitPrice) as TotalRevenue 
+from DB.NAME.Orders o 
+inner join DB.NAME.OrderDetails od on o.OrderID = od.OrderID 
+inner join DB.NAME.Products p on od.ProductID = p.ProductID 
+inner join DB.NAME.Categories c on p.CategoryID = c.CategoryID 
+where o.ShipCountry in ('USA', 'Mexico')
+and od.Discount = 0
+group by c.CategoryName
+
+
+
+
+SELECT c.CompanyName , 
+sum(case when c2.CategoryName = 'Beverages' then od.Quantity else 0 end) as Beverages,
+sum(case when c2.CategoryName = 'Produce' then od.Quantity else 0 end) as Produce,
+sum(case when c2.CategoryName = 'Dairy Products' then od.Quantity else 0 end) as Dairy,
+sum(case when c2.CategoryName not in ('Beverages', 'Produce', 'Dairy Products') then od.Quantity else 0 end) as Other,
+sum(od.Quantity) as Total
+from DB.NAME.Customers c 
+inner JOIN DB.NAME.Orders o on c.CustomerID = o.CustomerID 
+inner join DB.NAME.OrderDetails od on o.OrderID = od.OrderID 
+inner join DB.NAME.dbo.Products p on od.ProductID = p.ProductID 
+inner join DB.NAME.Categories c2 on p.CategoryID = c2.CategoryID 
+group by c.CompanyName 
+having sum(od.Quantity) >= 1000
+order by Total DESC
+
+
+ 
+
+
+
+SELECT s.CompanyName as Shipper, count(o.OrderID) as TotalOrders,
+count(case when ShippedDate <= RequiredDate then 1 else null end) as OnTimeOrders, 
+round(count(case when ShippedDate <= RequiredDate then 1 else null end) / cast(count(o.OrderID) as dec(10,3)), 3) as OnTimePct
+from DB.NAME.Orders o 
+inner join DB.NAME.Shippers s on o.ShipVia = s.ShipperID 
+GROUP by s.CompanyName 
+
+
+
+
+select r.RegionDescription , count(case when datepart(Year, o.OrderDate) = 1996 then 1 else null end) as OrdersQ4_96,
+count(case when datepart(Year, o.OrderDate) = 1997 then 1 else null end) as OrdersQ4_97,
+cast(count(case when datepart(Year, o.OrderDate) = 1997 then 1 else null end) as dec(10,3)) / count(case when datepart(Year, o.OrderDate) = 1996 then 1 else null end) - 1
+as PctGrowth
+from DB.NAME.Region r 
+inner join DB.NAME.Territories t  on r.RegionID = t.RegionID 
+inner JOIN DB.NAME.EmployeeTerritories et on t.TerritoryID = et.TerritoryID 
+inner join DB.NAME.Employees e on et.EmployeeID = e.EmployeeID 
+inner join DB.NAME.Orders o on e.EmployeeID = o.EmployeeID 
+where DATEPART(Quarter, o.OrderDate) = 4
+group by r.RegionDescription 
