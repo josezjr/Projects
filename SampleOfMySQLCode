@@ -1,4 +1,4 @@
---SAMPLE SQL CODE, NAMES HAVE BEEN ANONYMIZED
+--SAMPLE OF SQL CODE I'VE WRITTEN, NAMES HAVE BEEN ANONYMIZED
 
 
 select o.OrderID , o.Freight  , c.CompanyName , c.Region , concat(e.LastName , ', ', e.FirstName) as FullName,
