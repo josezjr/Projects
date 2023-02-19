@@ -1,0 +1,561 @@
+---
+title: "Sample 3"
+author: "Jose Zavala"
+output: html_document
+---
+
+```{r load-libraries include=FALSE}
+library(tidyverse)
+library(readxl) 
+library(IncomPair)
+library(exactRankTests)
+library(reshape) #melt function, need it for ggplot side by side bar plots
+library(ggpubr) #create publishable tables, might not need
+```
+
+
+```{r read-data}
+dataNames = read_excel("filepath.xlsx",
+                       sheet = 1, skip = 0, n_max = 0) %>% names()
+
+data = read_excel("filepath.xlsx",
+                    sheet = 1, skip = 2, col_names = dataNames)
+
+df = data
+
+#names(df)
+#view(df)
+```
+
+### Data Cleaning and Preprocessing
+```{r as-numeric}
+# Age - numeric response
+df$Q11_1_TEXT = as.numeric(df$Q11_1_TEXT)
+
+
+df$Q12_1_TEXT= as.numeric(df$Q12_1_TEXT)
+```
+
+### Demographics
+
+```{r demographics}
+mean(df$Q11_1_TEXT, na.rm = TRUE)
+by_gender = df %>% group_by(Q10)  %>% dplyr::summarize(count = n(), AvgAge = mean(Q11_1_TEXT, na.rm = TRUE))
+by_gender 
+
+
+by_capacity = df %>% group_by(Q9) %>% summarise(count = n())
+by_capacity
+
+by_setting = df %>% group_by(Q14) %>% summarise(count = n())
+by_setting
+
+mean(df$Q12_1_TEXT, na.rm = T)
+median(df$Q12_1_TEXT, na.rm = T)
+
+median(df$Q11_1_TEXT, na.rm = TRUE)
+mean(df$Q11_1_TEXT, na.rm = TRUE)
+
+```
+
+### Knowledge Questions Pre and Post
+
+```{r knowledge-counts}
+# Knowledge Questions 
+
+#1. Knowledge Q1
+
+left_join(count(df, level = as.factor(Q15), name = "pre"), count(df, level = as.factor(Q15B), name = "post")) |> mutate(across(pre:post, ~replace_na(., 0)))
+
+#2. Knowledge Q2
+
+left_join(count(df, level = as.factor(Q16), name = "pre"), count(df, level = as.factor(Q16B), name = "post")) |> mutate(across(pre:post, ~replace_na(., 0)))
+
+#3. Knowledge Q3
+
+left_join(count(df, level = as.factor(Q17), name = "pre"), count(df, level = as.factor(Q17B), name = "post")) |> mutate(across(pre:post, ~replace_na(., 0)))
+
+#4. Knowledge Q4
+
+left_join(count(df, level = as.factor(Q18), name = "pre"), count(df, level = as.factor(Q18B), name = "post")) |> mutate(across(pre:post, ~replace_na(., 0)))
+
+# 5. Knowledge Q5
+
+left_join(count(df, level = as.factor(Q19), name = "pre"), count(df, level = as.factor(Q19B), name = "post")) |> mutate(across(pre:post, ~replace_na(., 0)))
+
+#6. Knowledge Q6
+
+left_join(count(df, level = as.factor(Q20), name = "pre"), count(df, level = as.factor(Q20B), name = "post")) |> mutate(across(pre:post, ~replace_na(., 0)))
+
+```
+
+```{r podcast}
+#Q7
+by_Q42 = df %>% group_by(Q42) %>% summarise(count = n())
+by_Q42
+```
+
+# Data Analysis
+
+
+```{r prop-test}
+#question 1
+prop.test(x = c(51,39), n = c(118, 47), alternative = "less")
+
+#question 2
+prop.test(x = c(9, 29), n = c(110, 47), alternative = "less")
+
+#question 3
+prop.test(x = c(47, 40), n = c(117, 47), alternative = "less")
+
+#question 4
+prop.test(x = c(57, 35), n = c(116, 47), alternative = "less")
+
+#question 5
+prop.test(x = c(22, 31), n = c(116, 46), alternative = "less")
+
+#question 6
+prop.test(x = c(44, 38), n = c(116, 46), alternative = "less")
+
+#all test are significant
+```
+
+
+### Counts for questions
+
+
+```{r survey-counts}
+
+#get counts and make tables for publication
+#7.
+
+countQ7 = left_join(count(df, level = as.factor(Q21), name = "Pre Count"), count(df, level = as.factor(Q21B), name = "Post Count")) |> mutate(across(`Pre Count`:`Post Count`, ~replace_na(., 0)))
+
+#8
+
+countQ8 = left_join(count(df, level = as.factor(Q22), name = "Pre Count"), count(df, level = as.factor(Q22B), name = "Post Count")) |> mutate(across(`Pre Count`:`Post Count`, ~replace_na(., 0)))
+
+# 9. 
+
+countQ9 = left_join(count(df, level = as.factor(Q23), name = "Pre Count"), count(df, level = as.factor(Q23B), name = "Post Count")) |> mutate(across(`Pre Count`:`Post Count`, ~replace_na(., 0)))
+
+# 10. 
+
+
+countQ10 = left_join(count(df, level = as.factor(Q24), name = "Pre Count"), count(df, level = as.factor(Q24B), name = "Post Count")) |> mutate(across(`Pre Count`:`Post Count`, ~replace_na(., 0)))
+
+# 11.	
+
+countQ11 = left_join(count(df, level = as.factor(Q38), name = "Pre Count"), count(df, level = as.factor(Q38B), name = "Post Count")) |> mutate(across(`Pre Count`:`Post Count`, ~replace_na(., 0)))
+
+# 12.	
+
+countQ12 = left_join(count(df, level = as.factor(Q39), name = "Pre Count"), count(df, level = as.factor(Q39B), name = "Post Count")) |> mutate(across(`Pre Count`:`Post Count`, ~replace_na(., 0)))
+
+#13.	
+
+countQ13 = left_join(count(df, level = as.factor(Q40), name = "Pre Count"), count(df, level = as.factor(Q40B), name = "Post Count")) |> mutate(across(`Pre Count`:`Post Count`, ~replace_na(., 0)))
+
+# 14. 
+
+countQ14 = left_join(count(df, level = as.factor(Q25), name = "Pre Count"), count(df, level = as.factor(Q34), name = "Post Count")) |> mutate(across(`Pre Count`:`Post Count`, ~replace_na(., 0)))
+
+#  15. 
+
+countQ15 = left_join(count(df, level = as.factor(Q26), name = "Pre Count"), count(df, level = as.factor(Q37), name = "Post Count")) |> mutate(across(`Pre Count`:`Post Count`, ~replace_na(., 0)))
+
+
+#ggtexttable(countQ7, rows = NULL, theme = ttheme("mBlueWhite")) %>%  tab_add_title(text ="ABC")
+testlist = list(countQ7, countQ8, countQ9, countQ10, countQ11, countQ12, countQ13, countQ14, countQ15)
+listoftabs = map(testlist, ggtexttable, rows = NULL, theme = ttheme("mBlueWhite"))
+
+titleQ7 = paste0("string",
+                 " string:") %>% strwrap(width = 35) %>% paste(collapse = "\n")
+titleQ8 = paste0("string", 
+                 "string", "string") %>% strwrap(width = 35) %>% paste(collapse = "\n")
+
+
+#listoftitles = list(titleQ7, titleQ8, titleQ9, titleQ10, titleQ11, titleQ12, titleQ13, titleQ14, titleQ15)
+listoftabs[[1]] %>% tab_add_title(text = titleQ7, size = 10)
+listoftabs[[2]] %>% tab_add_title(text = titleQ8, size = 10)
+listoftabs[[3]] %>% tab_add_title(text = titleQ9,  size = 10)
+listoftabs[[4]] %>% tab_add_title(text = titleQ10, size = 10)
+listoftabs[[5]] %>% tab_add_title(text = titleQ11, size = 10)
+listoftabs[[6]] %>% tab_add_title(text = titleQ12, size = 10)
+listoftabs[[7]] %>% tab_add_title(text = titleQ13, size = 10)
+listoftabs[[8]] %>% tab_add_title(text = titleQ14, size = 10)
+listoftabs[[9]] %>% tab_add_title(text = titleQ15, size = 10)
+```
+
+
+
+### Plots
+
+```{r barplots}
+#melt(as.data.frame(countQ14) because R and dplyr do not play nice with melt, need to explicitly convert to df
+#plots require heavy customization. For publication
+plot_q7 = ggplot(melt(as.data.frame(countQ7)) , aes(x = `level`, y = `value`, fill = `variable`)) + 
+  geom_bar(stat="identity", width=.5, position = "dodge", alpha = .9) +
+            labs(x = "Score", y = 'Count',
+                 title = "Q1") + theme_minimal()+
+  theme(axis.title = element_text(size = 9), plot.title = element_text(size = 7, face = "bold"))
+
+plot_q8 = ggplot(melt(as.data.frame(countQ8)) , aes(x = `level`, y = `value`, fill = `variable`)) + 
+  geom_bar(stat="identity", width=.5, position = "dodge", alpha = .9) + 
+            labs(x = "Score", y = 'Count',
+                 title = "Q2") + theme_minimal() + 
+  theme(axis.title = element_text(size = 9), plot.title = element_text(size = 7, face = "bold"))
+
+plot_q9 = ggplot(melt(as.data.frame(countQ9)) , aes(x = `level`, y = `value`, fill = `variable`)) + 
+  geom_bar(stat="identity", width=.5, position = "dodge", alpha = .9) +
+            labs(x = "Score", y = 'Count',
+                 title = "Q3") + theme_minimal()+
+  theme(axis.title = element_text(size = 9), plot.title = element_text(size = 7, face = "bold"))
+
+plot_q10 = ggplot(melt(as.data.frame(countQ10)) , aes(x = `level`, y = `value`, fill = `variable`)) + 
+  geom_bar(stat="identity", width=.5, position = "dodge", alpha = .9) +
+            labs(x = "Score", y = 'Count',
+                 title = "Q4") + theme_minimal()+
+  theme(axis.title = element_text(size = 9), plot.title = element_text(size = 7, face = "bold"))
+
+plot_q11 = ggplot(melt(as.data.frame(countQ11)) , aes(x = `level`, y = `value`, fill = `variable`)) + 
+  geom_bar(stat="identity", width=.5, position = "dodge", alpha = .9) +
+            labs(x = "Score", y = 'Count',
+                 title = "Q5") + theme_minimal()+
+  theme(axis.title = element_text(size = 9), plot.title = element_text(size = 7, face = "bold"))
+
+plot_q12 = ggplot(melt(as.data.frame(countQ12)) , aes(x = `level`, y = `value`, fill = `variable`)) + 
+  geom_bar(stat="identity", width=.5, position = "dodge", alpha = .9) +
+            labs(x = "Score", y = 'Count',
+                 title = "Q6") + theme_minimal()+
+  theme(axis.title = element_text(size = 9), plot.title = element_text(size = 7, face = "bold"))
+
+plot_q13 = ggplot(melt(as.data.frame(countQ13)) , aes(x = `level`, y = `value`, fill = `variable`)) +
+  geom_bar(stat="identity", width=.5, position = "dodge", alpha = .9) +
+            labs(x = "Score", y = 'Count',
+                 title = "Q7") + 
+  theme_minimal()+
+  theme(axis.title = element_text(size = 9), plot.title = element_text(size = 7, face = "bold"))
+
+plot_q14 = ggplot(melt(as.data.frame(countQ14)) , aes(x = `level`, y = `value`, fill = `variable`)) + 
+  geom_bar(stat="identity", width=.5, position = "dodge", alpha = .9) +
+            labs(x = "Selected Answer", y = 'Count',
+                 title = "Q8") + theme_minimal()+
+  theme(axis.title = element_text(size = 9), plot.title = element_text(size = 7, face = "bold"))
+
+plot_q15 = ggplot(melt(as.data.frame(countQ15)) , aes(x = `level`, y = `value`, fill = `variable`)) + 
+  geom_bar(stat="identity", width=.5, position = "dodge", alpha = .9) +
+            labs(x = "Score", y = 'Count',
+                 title = "Q9") + 
+  theme_minimal()+ theme(axis.title = element_text(size = 9), plot.title = element_text(size = 9, face = "bold"))
+#More plot customization
+plot_q7 = plot_q7 + labs(tag = "A") + geom_text(stat = "identity", aes(label = `value`), vjust = -.2, 
+                                      position = position_dodge(width =.5), size = 2) + 
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+plot_q8 = plot_q8 + labs(tag = "B") + geom_text(stat = "identity", aes(label = `value`), vjust = -.5, 
+                                      position = position_dodge(width =.5), size = 2) + 
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+plot_q9 = plot_q9 + labs(tag = "C") + geom_text(stat = "identity", aes(label = `value`), vjust = -.5, 
+                                      position = position_dodge(width =.5), size = 2) + 
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+plot_q10 = plot_q10 + labs(tag = "D") + geom_text(stat = "identity", aes(label = `value`), vjust = -.5, 
+                                      position = position_dodge(width =.5), size = 2) + 
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+plot_q11  = plot_q11 + labs(tag = "E") + geom_text(stat = "identity", aes(label = `value`), vjust = -.5, 
+                                      position = position_dodge(width =.5), size = 2) + 
+                                      theme(legend.position = "bottom", legend.title = element_blank())
+
+plot_q12 = plot_q12 + labs(tag = "F") + geom_text(stat = "identity", aes(label = `value`), vjust = -.5, 
+                                      position = position_dodge(width =.5), size = 2) + 
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+plot_q13 = plot_q13 + labs(tag = "G") + geom_text(stat = "identity", aes(label = `value`), vjust = -.5, 
+                                      position = position_dodge(width =.5), size = 2) + 
+  theme(legend.position = "bottom",legend.title = element_blank())
+
+plot_q14 = plot_q14 + labs(tag = "I") + geom_text(stat = "identity", aes(label = `value`), vjust = -.5, 
+                                      position = position_dodge(width =.5), size = 2) + 
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+plot_q15 = plot_q15 + labs(tag = "H") + geom_text(stat = "identity", aes(label = `value`), vjust = -.5, 
+                                      position = position_dodge(width =.5), size = 2) + 
+  theme(legend.position = "right",legend.title = element_blank())
+
+
+p1 = ggarrange(plot_q7, plot_q8,plot_q9, plot_q10, plot_q11, plot_q12,
+               plot_q13, plot_q15, plot_q14, common.legend = TRUE, legend = "bottom",
+               nrow = 2, ncol = 2)
+
+multi.page = ggarrange(plot_q7, plot_q8, plot_q9, plot_q10, plot_q11,
+                       plot_q12, plot_q13, plot_q14, plot_q15, nrow = 2, ncol = 2,
+                       common.legend = T, legend = "bottom")
+multi.page[[1]] # Visualize page 1
+multi.page[[2]] # visualize page 4
+multi.page[[3]] #Visualize page 3
+
+```
+
+# Statsitcal Testing
+
+### Survey quesiton 7, pre q21, post q21B
+
+
+```{r analysis-q7}
+mean(as.numeric(df$Q21), na.rm = T)
+mean(as.numeric(df$Q21B), na.rm = T)
+xp = numeric()
+yp = numeric()
+xu = numeric()
+yu = numeric()
+# survey question 7, pre q21, post q21b
+
+x=df$Q21
+  y=df$Q21B
+ all=data.frame(x,y)
+ complete=na.omit(all)
+ 
+ xp=complete[,1]
+ yp=complete[,2]
+ 
+ xu=filter(all,!is.na(x) & is.na(y))[,1]
+yu=mean(yp) 
+#yu=filter(all,is.na(x) & !is.na(y))[,2]
+  
+#X = c(xp, xu)
+#Y = c(yp, yu)
+#mean(as.numeric(df$Q21), na.rm = T)
+#mean(as.numeric(df$Q21B), na.rm = T)
+#mean(X)
+#mean(Y)
+#cbind(as.numeric(df$Q21), as.numeric(df$Q21B))
+rankb(xp, yp, xu, yu, alternative = "less")
+permb(xp, yp, xu, yu, mu = 0, alternative = "less", method = "EH")
+
+
+```
+
+
+
+### Survey quesiton 8, pre q22, post q22B
+```{r analysis-q8}
+#reinitiate empty vectors
+xp = numeric()
+yp = numeric()
+xu = numeric()
+yu = numeric()
+
+# Survey quesiton 8, pre q22, post q22B
+x=df$Q22
+  y=df$Q22B
+ all=data.frame(x,y)
+ complete=na.omit(all)
+ 
+ xp=complete[,1]
+ yp=complete[,2]
+ 
+ xu=filter(all,!is.na(x) & is.na(y))[,1]
+yu=mean(yp) 
+#yu=filter(all,is.na(x) & !is.na(y))[,2]
+
+rankb(xp, yp, xu, yu, alternative = "less")
+permb(xp, yp, xu, yu, alternative = "less",mu = 0, method = "EH")
+
+
+```
+
+
+
+
+### Survey quesiton 9, pre q23, post q23B
+
+```{r analysis-q9}
+#reinitiate empty vectors
+xp = numeric()
+yp = numeric()
+xu = numeric()
+yu = numeric()
+
+# Survey quesiton 9, pre q23, post q23B
+
+x=df$Q23
+  y=df$Q23B
+ all=data.frame(x,y)
+ complete=na.omit(all)
+ 
+ xp=complete[,1]
+ yp=complete[,2]
+ 
+ xu=filter(all,!is.na(x) & is.na(y))[,1]
+yu=mean(yp) 
+#yu=filter(all,is.na(x) & !is.na(y))[,2]
+X = c(xp, xu)
+Y = c(yp, yu)
+rankb(xp, yp, xu, yu, alternative = "less")
+permb(xp, yp, xu, yu, alternative = "less",mu = 0, method = "EH")
+
+```
+
+
+### Survey question 10, pre q24, post q24B
+
+```{r analysis-q10}
+#reinitiate empty vectors
+xp = numeric()
+yp = numeric()
+xu = numeric()
+yu = numeric()
+# Survey question 10, pre q24, post q24B
+
+x=df$Q24
+  y=df$Q24B
+ all=data.frame(x,y)
+ complete=na.omit(all)
+ 
+ xp=complete[,1]
+ yp=complete[,2]
+ 
+ xu=filter(all,!is.na(x) & is.na(y))[,1]
+yu=mean(yp) 
+#yu=filter(all,is.na(x) & !is.na(y))[,2]
+
+rankb(xp, yp, xu, yu, alternative = "less")
+permb(xp, yp, xu, yu, alternative = "less",mu = 0, method = "EH")
+
+```
+
+### Survey question 11, pre 38, post q38B
+
+```{r analysis-q11}
+#reinitiate empty vectors
+xp = numeric()
+yp = numeric()
+xu = numeric()
+yu = numeric()
+# Survey question 11, pre 38, post q38B
+
+x=df$Q38
+  y=df$Q38B
+ all=data.frame(x,y)
+ complete=na.omit(all)
+ 
+ xp=complete[,1]
+ yp=complete[,2]
+ 
+ xu=filter(all,!is.na(x) & is.na(y))[,1]
+yu=mean(yp) 
+#yu=filter(all,is.na(x) & !is.na(y))[,2]
+
+rankb(xp, yp, xu, yu, alternative = "less")
+permb(xp, yp, xu, yu, alternative = "less",mu = 0, method = "EH")
+
+
+```
+
+
+
+ 
+### Survey question 12, pre 39, post q39B
+
+```{r analysis-q12}
+#reinitiate empty vectors
+xp = numeric()
+yp = numeric()
+xu = numeric()
+yu = numeric()
+# Survey question 12, pre 39, post q39B
+
+x=df$Q39
+  y=df$Q39B
+ all=data.frame(x,y)
+ complete=na.omit(all)
+ 
+ xp=complete[,1]
+ yp=complete[,2]
+ 
+ xu=filter(all,!is.na(x) & is.na(y))[,1]
+yu=mean(yp) 
+#yu=filter(all,is.na(x) & !is.na(y))[,2]
+
+rankb(xp, yp, xu, yu, alternative = "less")
+permb(xp, yp, xu, yu, alternative = "less",mu = 0, method = "EH")
+
+```
+
+
+
+### Survey question 13, pre 40, post q40B
+
+```{r analysis-q13}
+#reinitiate empty vectors
+xp = numeric()
+yp = numeric()
+xu = numeric()
+yu = numeric()
+# Survey question 13, pre 40, post q40B
+
+x=df$Q40
+  y=df$Q40B
+ all=data.frame(x,y)
+ complete=na.omit(all)
+ 
+ xp=complete[,1]
+ yp=complete[,2]
+ 
+ xu=filter(all,!is.na(x) & is.na(y))[,1]
+yu=mean(yp) 
+#yu=filter(all,is.na(x) & !is.na(y))[,2]
+X = c(xp, xu)
+Y = c(yp, yu)
+mean(X)
+mean(Y)
+rankb(xp, yp, xu, yu, alternative = "less")
+permb(xp, yp, xu, yu, alternative = "less",mu = 0, method = "EH")
+?rankb
+
+```
+
+
+
+
+### Survey Question 15, pre 26, post q37
+
+```{r analysis-q15}
+#reinitiate empty vectors
+xp = numeric()
+yp = numeric()
+xu = numeric()
+yu = numeric()
+# Survey question 15, pre 26, post q37
+
+x=df$Q26
+  y=df$Q37
+ all=data.frame(x,y)
+ complete=na.omit(all)
+ 
+ xp=complete[,1]
+ yp=complete[,2]
+ 
+ xu=filter(all,!is.na(x) & is.na(y))[,1]
+ yu = filter(all,is.na(x) & !is.na(y))[,2] 
+
+
+ mean(xp)
+ mean(yp)
+ mean(xu)
+rankb(xp, yp, xu, yu, alternative = "less")
+permb(xp, yp, xu, yu, alternative = "less",mu = 0, method = "EH")
+
+#cbind(as.numeric(df$Q26), as.numeric(df$Q37))
+
+```
+
+
+
+
+
+
+

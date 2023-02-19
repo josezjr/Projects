@@ -1,0 +1,245 @@
+---
+title: "DNP project"
+author: "Jose Zavala"
+output: html_document
+---
+
+```{r libraries}
+library(tidyverse)
+library(openxlsx)
+library(ggstatsplot)
+```
+
+```{r read-data}
+data = read.xlsx("/filepath.xlsx", colNames = TRUE)
+df = data
+```
+
+#Demographics
+```{r demographics}
+df %>% nrow()
+
+df %>% group_by(Q1) %>% summarise(Count = n()) %>%
+  mutate(Pct = round(Count / sum(Count), digits = 4))
+
+df %>% group_by(Q2) %>% summarise(Count = n()) %>%
+  mutate(Pct = round(Count / sum(Count), digits = 4))
+
+df %>% group_by(Q3) %>% summarise(Count = n()) %>%
+  mutate(Pct = round(Count / sum(Count), digits = 4))
+
+df %>% group_by(Q4) %>% summarise(Count = n()) %>%
+  mutate(Pct = round(Count / sum(Count), digits = 4))
+
+df %>% group_by(Q5) %>% summarise(Count = n()) %>%
+  mutate(Pct = round(Count / sum(Count), digits = 4))
+
+df %>% group_by(Q6) %>% summarise(Count = n()) %>%
+  mutate(Pct = round(Count / sum(Count), digits = 4))
+
+df %>% group_by(Q7) %>% summarise(Count = n()) %>%
+  mutate(Pct = round(Count / sum(Count), digits = 4))
+
+df %>% group_by(Q8) %>% summarise(Count = n()) %>%
+  mutate(Pct = round(Count / sum(Count), digits = 4))
+
+df %>% group_by(Q9) %>% summarise(Count = n()) %>%
+  mutate(Pct = round(Count / sum(Count), digits = 4))
+
+df %>% group_by(Q10) %>% summarise(Count = n()) %>%
+  mutate(Pct = round(Count / sum(Count), digits = 4))
+
+df %>% group_by(Q11) %>% summarise(Count = n()) %>%
+  mutate(Pct = round(Count / sum(Count), digits = 4))
+
+df %>% group_by(Q12) %>% summarise(Count = n()) %>%
+  mutate(Pct = round(Count / sum(Count), digits = 4))
+
+df %>% group_by(Q13) %>% summarise(Count = n()) %>%
+  mutate(Pct = round(Count / sum(Count), digits = 4))
+```
+
+
+#Plots
+```{r bar-plots}
+#Q1
+bar1 = df %>% ggplot(aes(x = Q1)) + 
+  geom_bar(stat = 'count', fill = "steelblue") +
+  labs(x = "Answer", y = "Count", title = "Q1") 
+
+#Q2
+bar2 = df %>% ggplot(aes(x = Q2)) + 
+  geom_bar(stat = 'count', fill = "steelblue") +
+  labs(x = "Score", y = "Count", title = "Q2") +
+  theme_minimal()
+
+#Q3 
+bar3 = df %>% ggplot(aes(x = Q3)) + 
+  geom_bar(stat = 'count', fill = "steelblue") +
+  labs(x = "Score", y = "Count", title = "Q3") +
+  theme_minimal()
+
+#Q4 
+bar4 = df %>% ggplot(aes(x = Q4)) + 
+  geom_bar(stat = 'count', fill = "steelblue") +
+  labs(x = "Score", y = "Count",
+       title = "Q4") +
+  theme_minimal()
+#Q5
+bar5 = df %>% ggplot(aes(x = Q5)) + 
+  geom_bar(stat = 'count', fill = "steelblue") +
+  labs(x = "Score", y = "Count",
+       title = "Q5") +
+  theme_minimal() 
+
+#Q6
+bar6 = df %>% ggplot(aes(x = Q6)) + 
+  geom_bar(stat = 'count', fill = "steelblue") +
+  labs(x = "Score", y = "Count",
+       title = "Q6") +
+  theme_minimal() + ylim(0,15)
+
+#Q7
+bar7 = df %>% ggplot(aes(x = Q7)) + 
+  geom_bar(stat = 'count', fill = "steelblue") +
+  labs(x = "Score", y = "Count",
+  title = "Q7") + theme_minimal() + xlim("Yes", "No")
+                                                                                 
+#(bar1 + bar2) / (bar3 + bar4) / (bar5 + bar6) / bar7
+bar1
+bar2
+bar3
+bar4
+bar5
+bar6
+bar7
+```
+
+
+
+#Pre and Post Questions
+
+
+```{r Q14-Q22}
+
+pre = df$Q14
+post = df$Q22
+t = table(pre, post)
+t
+mcnemar.test(t, correct = F)
+
+
+ggbarstats(data = df, x = Q14, y = Q22, paired = T, label = "both",
+           title = "Test 1")
+
+```
+
+```{r Q15-Q23}
+pre = df$Q15
+post = df$Q23
+t = table(pre, post)
+t
+mcnemar.test(t, correct = F)
+
+
+ggbarstats(data = df, x = Q15, y = Q23, paired = T, label = "both",
+           title = "Test 2")
+```
+
+```{r Q16-Q24}
+pre = df$Q16
+post = df$Q24
+t = table(pre, post)
+t
+mcnemar.test(t, correct = F)
+
+ggbarstats(data = df, x = Q16, y = Q24, paired = T, label = "both",
+           title = "Test 3")
+```
+
+
+```{r Q17-Q25}
+pre = df$Q17
+post = df$Q25
+t = table(pre, post)
+t
+mcnemar.test(t, correct = F)
+
+
+ggbarstats(data = df, x = Q19, y = Q27, paired = T, label = "both",
+           title = "Test 4")
+```
+
+```{r Q18-Q26}
+pre = df$Q18
+post = df$Q26
+t = table(pre, post)
+t
+mcnemar.test(t, correct = F)
+
+ggbarstats(data = df, x = Q19, y = Q27, paired = T, label = "both", title = "Test 5")
+```
+
+
+```{r Q19-Q27}
+pre = df$Q19
+post = df$Q27
+t = table(pre, post)
+t
+mcnemar.test(t, correct = F)
+
+ggbarstats(data = df, x = Q19, y = Q27, paired = T, label = "both", title = "Test 6")
+```
+
+
+```{r Q20-Q28}
+pre = df$Q20
+post = df$Q28
+t = table(pre, post)
+t
+mcnemar.test(t, correct = F)
+
+ggbarstats(data = df, x = Q20, y = Q28, paired = T, label = "both", title = "Test 7")
+```
+
+
+```{r overall}
+
+## All questions combined
+overall = matrix(c(36, 17, 49, 101), byrow = TRUE, 2,2,
+                       dimnames = list("Pre" = c("0", "1"),
+                                       "Post" = c("0", "1")))
+overall
+chisq.test(overall)
+mcnemar.test(overall, correct = F)
+
+
+```
+
+
+#Association between Q2, Q3, and Q30
+```{r}
+
+
+q2_table = table(df$Q2, df$Q30)
+q3_table = table(df$Q3, df$Q30)
+
+addmargins(q2_table)
+addmargins(q3_table)
+
+
+barplot(q2_table, beside = T, legend = T)
+
+
+fisher.test(q2_table, conf.int = T, conf.level = 0.95, hybrid = T)
+fisher.test(q3_table, conf.int = T, conf.level = 0.95, hybrid = T)
+
+```
+
+
+
+```{r}
+df %>% group_by(Q31) %>% summarise(Count = n())
+df %>% group_by(Q32) %>% summarise(Count = n())
+```
+

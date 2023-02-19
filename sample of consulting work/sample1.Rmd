@@ -1,0 +1,241 @@
+---
+title: "Final Candidate Analysis for Jane and Jess"
+author: "Jose Zavala"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(readxl)
+library(exactRankTests)
+```
+
+```{r include=FALSE}
+Testnames = read_excel("filepath.xlsx",
+                       sheet = 1, skip = 0, n_max = 0) %>% names()
+
+testDF = read_excel("filepath.xlsx",
+                    sheet = 1, skip = 2, col_names = Testnames)
+
+#every question has "1_" as leading chars, remove it
+names(testDF) = substring(names(testDF), 3)
+
+#turn char to factor variables
+testDF = testDF %>% mutate_if(is.character, as.factor)
+# Return all factor levels of each column
+sapply(testDF, levels)
+```
+
+```{r counts-for-all-variables, include=FALSE}
+#need to get counts for all variables and factors
+
+
+freqList = purrr::map(testDF, ~ count(tibble(Response = .x), Response) %>% 
+               mutate(pct = (n / sum(n) * 100)))
+freqList
+```
+
+```{r}
+testDF %>% ggplot(aes(x = Q1)) + 
+  geom_bar(stat = 'count', fill = "steelblue", width = .7) +
+  labs(x = "Answer", y = "Count", title = "Demographic Q1") + theme_minimal() + ylim(0,8)
+
+testDF %>% ggplot(aes(x = Q2)) + 
+  geom_bar(stat = 'count', fill = "steelblue", width = .5) +
+  labs(x = "Answer", y = "Count", title = "Demographic Q2") + theme_minimal() + 
+  scale_y_continuous(breaks=c(0,2,4,6,8,10))
+
+testDF %>% ggplot(aes(x = Q3)) + 
+  geom_bar(stat = 'count', fill = "steelblue", width = .5) +
+  labs(x = "Answer", y = "Count", title = "Demographic Q3") + theme_minimal() + 
+  scale_y_continuous(breaks=c(0,2,4,6,8,10)) #+  #opts(axis.title.x = theme_text(vjust=-0.5))
+
+testDF %>% ggplot(aes(x = Q4)) + 
+  geom_bar(stat = 'count', fill = "steelblue", width = .5) +
+  labs(x = "Answer", y = "Count", title = "Demographic Q4") + theme_minimal() + 
+  scale_y_continuous(breaks=c(0,2,4,6,8,10))
+```
+
+
+```{r}
+#get correct answers, need correct/incorrect df
+Bool.names = read_excel("filepath.xlsx",
+                       sheet = 1, skip = 0, n_max = 0) %>% names()
+
+boolDF = read_excel("/filepath.xlsx",
+                    sheet = 1, skip = 2, col_names = Bool.names)
+
+#every question has "1_" as leading chars, remove them
+names(boolDF) = substring(names(boolDF), 3)
+
+#Pre questions
+boolDF$Q5 = as.numeric(boolDF$Q5)
+boolDF$Q6 = as.numeric(boolDF$Q6)
+boolDF$Q7 = as.numeric(boolDF$Q7)
+boolDF$Q8 = as.numeric(boolDF$Q8)
+boolDF$Q14 = as.numeric(boolDF$Q14)
+boolDF$Q15 = as.numeric(boolDF$Q15)
+boolDF$Q16 = as.numeric(boolDF$Q16)
+boolDF$Q17 = as.numeric(boolDF$Q17)
+boolDF$Q18 = as.numeric(boolDF$Q18)
+boolDF$Q19 = as.numeric(boolDF$Q19)
+
+#post questions
+boolDF$Q48 = as.numeric(boolDF$Q48)
+boolDF$Q49 = as.numeric(boolDF$Q49)
+boolDF$Q50 = as.numeric(boolDF$Q50)
+boolDF$Q51 = as.numeric(boolDF$Q51)
+boolDF$Q57 = as.numeric(boolDF$Q57)
+boolDF$Q58 = as.numeric(boolDF$Q58)
+boolDF$Q59 = as.numeric(boolDF$Q59)
+boolDF$Q60 = as.numeric(boolDF$Q60)
+boolDF$Q61 = as.numeric(boolDF$Q61)
+boolDF$Q62 = as.numeric(boolDF$Q62)
+
+#20, 21, 22, 23 are all agree/disagree questions
+#9, 12, 13 are all agree/disagree questions
+#54, 55, 56 are all agree disagree questions
+#53, 64, 65, 66, 67 are all agree/disagree questions
+```
+
+
+```{r wilcox}
+# 1 = neither agree or disagree, 2 = somewhat agree, 3 = somewhat disagree, 4 = strong disagree
+wilcox.exact(as.numeric(testDF$Q9), as.numeric(testDF$Q54), paired = TRUE, alternative = "greater", mu = 0)
+wilcox.exact(as.numeric(testDF$Q12), as.numeric(testDF$Q55), paired = TRUE, alternative = "greater", mu = 0)
+wilcox.exact(as.numeric(testDF$Q13), as.numeric(testDF$Q56), paired = TRUE, alternative = "greater", mu = 0)
+
+
+wilcox.exact(as.numeric(testDF$Q20), as.numeric(testDF$Q63), paired = TRUE, alternative = "greater", mu = 0)
+wilcox.exact(as.numeric(testDF$Q21), as.numeric(testDF$Q64), paired = TRUE, alternative = "greater", mu = 0)
+wilcox.exact(as.numeric(testDF$Q22), as.numeric(testDF$Q65), paired = TRUE, alternative = "greater", mu = 0)
+wilcox.exact(as.numeric(testDF$Q23), as.numeric(testDF$Q66), paired = TRUE, alternative = "greater", mu = 0)
+
+#question 67 has no pair
+# 1 = neither agree or disagree, 2 = somewhat agree, 3 = somewhat disagree, 4 = strong agree, 5 = strong disagree
+testDF$Q67 = recode_factor(testDF$Q67, `Neither agree nor disagree` = 0, `Somewhat agree` = 1, `Strongly agree` = 2,
+              `Somewhat disagree` = -1, `Strongly disagree` = -2)
+wilcox.exact(as.numeric(testDF$Q67), alternative = "greater", mu = 0)
+
+```
+
+
+
+```{r Q5-Q48}
+
+#pairs: (Q5, Q48) - (Q6, Q49) - (Q7, Q50) - (Q8, Q51) - ( Q14, Q57) - (Q15, Q58) - (Q16, Q59) -
+# (Q17, Q60) - (Q18, Q61) - (Q19, Q62) -
+pre = boolDF$Q5
+post = boolDF$Q48
+t = table(pre, post)
+t
+mcnemar.test(t, correct = F)
+#binom.test(0, )
+```
+
+```{r Q6-Q49}
+
+pre = boolDF$Q6
+post = boolDF$Q49
+t = table(pre, post)
+t
+mcnemar.test(t, correct = F)
+binom.test(4, 4, alternative = "greater")
+#binom.test(7, 8, alternative = "greater")
+```
+
+```{r Q7-Q50}
+
+pre = boolDF$Q7
+post = boolDF$Q50
+t = table(pre, post)
+t
+mcnemar.test(t, correct = F)
+binom.test(4, 6, alternative = "greater")
+```
+
+```{r Q8-Q51}
+
+pre = boolDF$Q8
+post = boolDF$Q51
+t = table(pre, post)
+t
+mcnemar.test(t, correct = F)
+#binom.test(0,0): NA
+```
+
+```{r Q14-Q57}
+
+pre = boolDF$Q14
+post = boolDF$Q57
+t = table(pre, post)
+t
+mcnemar.test(t, correct = F)
+binom.test(2, 3, alternative = 'greater')
+```
+
+```{r Q15-Q58}
+
+pre = boolDF$Q15
+post = boolDF$Q58
+t = table(pre, post)
+t
+mcnemar.test(t, correct = F)
+binom.test(3, 3, alternative = "greater")
+```
+
+```{r Q16-Q59}
+
+pre = boolDF$Q16
+post = boolDF$Q59
+t = table(pre, post)
+t
+
+mcnemar.test(t, correct = F)
+binom.test(4, 5, alternative = "greater")
+```
+
+```{r Q17-Q60}
+
+pre = boolDF$Q17
+post = boolDF$Q60
+t = table(pre, post)
+t
+mcnemar.test(t, correct = F)
+binom.test(2, 3, alternative = "greater")
+```
+
+```{r Q18-Q61}
+
+pre = boolDF$Q18
+post = boolDF$Q61
+t = table(pre, post)
+t
+mcnemar.test(t, correct = F)
+binom.test(0, 3, alternative = "greater")
+```
+
+```{r Q19-Q62}
+
+
+pre = boolDF$Q19
+post = boolDF$Q62
+t = table(pre, post)
+t
+mcnemar.test(t, correct = F)
+binom.test(2, 2)
+
+```
+
+```{r overall}
+overall = matrix(c(21,20,9,80), byrow = TRUE, 2,2, dimnames = list("Pre" = c("incorrect", "correct"),
+                                                               "Post" = c("incorrect", "correct")))
+overall
+mcnemar.test(overall, correct = F)
+
+#total sign/binomial test
+binom.test(20, 29, alternative = "greater")
+#knitr::purl("Code for Analysis v3.Rmd", documentation = 2L)
+```
